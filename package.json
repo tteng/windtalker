@@ -1,0 +1,25 @@
+{
+  "name" : "wind_talker",
+  "version" : "0.0.1",
+  "description" : "decode and decrypt finicial data piped in via tcp.",
+  "main" : "./index.js",
+  "dependencies" : {
+  },
+  "devDependencies" : {
+    "iconv": "2.0.7",
+    "redis": "0.9.0",
+    "hiredis": "0.1.15",
+    "mocha": "1.14.0"
+  },
+  "scripts" : {
+    "test" : "expresso"
+  },
+  "repository" : {
+  },
+  "author" : {
+    "name" : "readline",
+    "email" : "shreadline@gmail.com"
+  },
+  "license" : "GNU",
+  "engine" : ["node > 0.8.0"]
+}
