@@ -10,8 +10,7 @@ class WindTalker
     @greeting  = "m=#{@channel};u=dellsha01;p=jason3802;EX_HEAD=a8b9c0d1;EX_SIZE=1;"
     @client    = new net.Socket()
     @delta     = new Buffer 0
-    [@data_size, @compressed_data_size] = [0, 0]
-    [@head, @found_head] = [0, false]
+    [@message_size, @head, @found_head] = [0, 0, false]
     console.log "The cpu endian is #{os.endianness()}" 
 
   listen: ->
@@ -19,30 +18,43 @@ class WindTalker
       console.log "Connect to #{@host}:#{@port}"
       @client.write @greeting
 
+    #
+    #  --------------------------------------------------------------------------------------
+    #  |0xA8B9C0D1| EX_SIZE | CHUNK_SIZE| RAW_SIZE |        BINARYDATA                      |
+    #  -------------------------------------------------------------------------------------|
+    #  |  4bytes  | 4bytes  |  4bytes   |  4bytes  |        BINARYDATA                      |
+    #  -------------------------------------------------------------------------------------|
+    #  |  4bytes  |MSG_SIZE |CHUNK_SIZE | RAW_SIZE |        BINARYDATA                      |
+    #  --------------------------------------------|------------长度为CHUNKSIZE-4-----------|
+    #                                              |----------解压后长度为RAWSIZE-----------|
+    #                                              -----------------------------------------|
+    #                       |-------------------------长度为MSG_SIZE------------------------|
+    #                                                                                       |
+    #  ↑                    ↑                                                              ↑
+    #  head                 current_cursor                                                 end_point
+ 
+
     @client.on 'data', (data) =>
-      console.log "\n\n==============================" 
-      console.log "receive chunk size: #{data.length}"
       @delta = Buffer.concat [@delta, data]
-      console.log "delta length: #{@delta.length}"
-      
       unless @found_head
         unless @delta.length < 16
           for bite, i in @delta 
-            console.log @delta[i].toString('16')
+            #console.log @delta[i].toString('16')
             if @isHead(data, i)
               @head = i 
               @found_head = true
               break
 
         if @found_head 
-          @data_size = @delta.readUInt32LE(@head+4)
-          @compressed_data_size = @delta.readUInt32LE(@head+4+4)
+          @message_size =  @delta.readUInt32LE(@head+4)
           console.log "bingooo, got the head:#{@head}."
-          console.log "data_size: #{@data_size}"
-          console.log "compressed_data_size: #{@compressed_data_size}"
+          console.log "message_size: #{@message_size}"
 
-      if @delta.length >= (@head + 4 + 4 + @data_size)
-        @processStream @delta 
+      if @delta.length >= (@head + 4 + 4 + @message_size)
+        current_cursor = @head + 4 + 4
+        end_point = @head + 4 + 4 + @message_size-1
+        console.log "end_point should be #{end_point}"
+        @split_and_inflate current_cursor, end_point
         @client.destroy()
       else
         console.log "continue receiving ..."
@@ -50,20 +62,43 @@ class WindTalker
     @client.on 'close', ->
       console.log "Connection closed."
 
-  processStream: (data) ->  
-    console.log "God bless, received complete data"
-    compressed_data = new Buffer @data_size
-    compressed_data.fill 0
-    @delta.copy compressed_data, 0, @head+4+4+4, @head+4++4+4+155
-    zlib.inflate compressed_data, (error, result) ->
-      throw error if error
-      console.log "uncompressed data size: #{result.length}"
-    #@delta = @delta.slice @tail+4+@data_size, @delta.length
-    #restore data_size, compressed_data_size, head and found_head
-    [@data_size, @compressed_data_size] = [0, 0]
-    [@head, @found_head] = [0, false]
+  #
+  #  --------------------------------------------------------------------------------------
+  #  |0xA8B9C0D1| EX_SIZE | CHUNK_SIZE| RAW_SIZE |        BINARYDATA                      |
+  #  -------------------------------------------------------------------------------------|
+  #  |  4bytes  | 4bytes  |  4bytes   |  4bytes  |        BINARYDATA                      |
+  #  -------------------------------------------------------------------------------------|
+  #  |  4bytes  |MSG_SIZE |CHUNK_SIZE | RAW_SIZE |        BINARYDATA                      |
+  #                       |-------------------------长度为MSG_SIZE------------------------------------------|
+  #  --------------------------------------------|------------长度为CHUNKSIZE-4-----------|
+  #                                              |----------解压后长度为RAWSIZE-----------|
+  #                                              -----------------------------------------|
+  #  ↑                    ↑                       ↑                                      ↑                 ↑
+  #  head                 current_cursor          chunk_start                            chunk_end         end_point
+ 
 
-  
+  split_and_inflate: (current_cursor, end_point) ->
+    if current_cursor < end_point
+      console.log "current_cursor: #{current_cursor}"
+      chunk_size    = @delta.readUInt32LE current_cursor
+      raw_data_size = @delta.readUInt32LE current_cursor+4
+      console.log "----------- current cursor is #{current_cursor} ----------------"
+      chunk_start   = current_cursor + 8
+      chunk_end     = chunk_start + chunk_size-1
+      console.log "chunk_size: #{chunk_size}"
+      console.log "raw_data_size: #{raw_data_size}"
+      compressed_data = new Buffer chunk_size
+      compressed_data.fill 0
+      @delta.copy compressed_data, 0, chunk_start, chunk_end
+      zlib.inflate compressed_data, (error, result) =>
+        throw error if error
+        console.log "uncompressed data size: #{result.length}"
+        console.log "current_cursor in callback: #{current_cursor}"
+        current_cursor = chunk_end + 1-4
+        console.log "next current cursor should be: #{current_cursor}"
+        console.log "end_point in callback: #{end_point}"
+        @split_and_inflate current_cursor, end_point
+
   isHead: (buff, idx) ->
     result = false
     bite = buff[idx]
