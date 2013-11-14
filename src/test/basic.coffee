@@ -30,26 +30,146 @@ console.log "The CPU endian is #{os.endianness()}"
 #    2.12 此时，整个文件已处理完毕了。说明该文件中只有三个压缩块。
 #    2.13如果文件尚未处理完毕，则继续处理下一块压缩块，直到全部压缩块处理完毕。
 
-buf_length          = 0
-reserved_bytes_len  = 4
-raw_buf_length      = 0
+class A
 
-fs.open __dirname + "/../../data/wsSample.wsz", 'r', (err,fd) ->
-  #wsSample.wsz 的第一个四个字节为数据长度, 第二个四个字节为zlib解压缩后数据长度
-  buf = new Buffer(4)
-  buf.fill 0
-  fs.read fd, buf, 0, reserved_bytes_len, 0, (err, bytesRead, buf) ->
-    buf_length = buf.readUInt32LE(0)
-    fs.read fd, buf, 0, reserved_bytes_len, 0+4, (err, bytesRead, buf) ->
-      raw_buf_length = buf.readUInt32LE(0)
-      console.log "buff length: #{buf_length}"
-      console.log "raw buff length: #{raw_buf_length}"
-      encrypt_data = new Buffer raw_buf_length
-      fs.read fd, encrypt_data, 0, raw_buf_length, 0+4+4, (err, bytesRead, buf) ->
-        zlib.inflate encrypt_data, (error, result) ->
-          #console.log "result.size: #{result.length}"
-          #conv = new Iconv 'GB2312', 'UTF-8//TRANSLIT//IGNORE'
-          #data = (conv.convert(result)).toString 'utf8'  
-          #console.log data
-          #console.log result.toString('utf-8', 0, 155)
-          console.log result.toString 'utf-8', 0, result
+  test: ->
+
+    fs.open __dirname + "/../../data/wsSample.wsz", 'r', (err,fd) =>
+      #wsSample.wsz 的第一个四个字节为数据长度, 第二个四个字节为zlib解压缩后数据长度
+      buf = new Buffer(4)
+      buf.fill 0
+      fs.read fd, buf, 0, 4, 0, (err, bytesRead, buf) =>
+        current_cursor = 0
+        @iterate_buf current_cursor, buf, fd
+
+  iterate_buf: (cursor, buf, fd) ->
+    if cursor < buf.length
+      buf_length = buf.readUInt32LE(cursor)
+      console.log "buff length: #{buf_length-4}"
+      fs.read fd, buf, 0, 4, cursor+4, (err, bytesRead, buf) =>
+        raw_buf_length = buf.readUInt32LE(0)
+        console.log "raw buff length: #{raw_buf_length}"
+        encrypt_data = new Buffer raw_buf_length
+        encrypt_data.fill 0
+        fs.read fd, encrypt_data, 0, raw_buf_length, 0+4+4, (err, bytesRead, buf) =>
+          analyze_data = @analyze_data
+          zlib.inflate encrypt_data, (error, result) ->
+            console.log "result length: #{result.length}"
+            if result.length % 156 isnt 0
+              console.log "warning: invalid buffer size" 
+            else
+              analyze_data 0, result
+
+        cursor = cursor+raw_buf_length+4
+        @iterate_buf cursor, buf, fd 
+    else
+      console.log "cursor: #{cursor}, reach file end, that's all."
+
+  analyze_data: (cursor, raw_buf) =>
+    if cursor >= raw_buf.length  
+      console.log "process finished." 
+      return
+    console.log "analyzing..."
+    data = new Buffer 156
+    data.fill 0
+    result = ''
+    buf = raw_buf.copy data, 0, cursor, cursor+156-1
+
+    time_t = data.readUInt32LE(0)         
+    console.log "time_t: #{time_t}"
+    result += "#{time_t},"
+
+    market = data.toString 'ascii', 4, 15
+    console.log "mar: #{market}"
+    result += "#{market},"
+
+    contract = data.toString 'ascii', 16, 31 
+    console.log "contract: #{contract}"
+    result += "#{contract},"
+
+    #IX下成交总笔数, 不应该是小数，应该是整数
+    total_deal = data.readFloatLE(32)
+    console.log "total_deal: #{total_deal}"
+    result += "#{total_deal},"
+
+    latest_deal = data.readFloatLE(36)  
+    console.log "latest_deal: #{latest_deal}"
+    result += "#{latest_deal},"
+
+    holding = data.readFloatLE(40)
+    console.log "holding: #{holding}"
+    result += "#{holding},"
+
+    feature_price = data.readFloatLE(44)
+    console.log "feature_price: #{feature_price}"
+    result += "#{feature_price},"
+
+    m_fLastClose = data.readFloatLE(48)
+    console.log "m_fLastClose: #{m_fLastClose}"
+    result += "#{m_fLastClose},"
+
+    m_fOpen = data.readFloatLE(52)
+    console.log "m_fOpen: #{m_fOpen}"
+    result += "#{m_fOpen},"
+
+    m_fHigh = data.readFloatLE(56)
+    console.log "m_fHigh: #{m_fHigh}"
+    result += "#{m_fHigh},"
+
+    m_fLow = data.readFloatLE(60)
+    console.log "m_fLow: #{m_fLow}"
+    result += "#{m_fLow},"
+
+    m_fNewPrice = data.readFloatLE(64) 
+    console.log "m_fNewPrice: #{m_fNewPrice}"
+    result += "#{m_fNewPrice},"
+
+    m_fVolume = data.readFloatLE(68) 
+    console.log "m_fNewPrice: #{m_fVolume}"
+    result += "#{m_fVolume},"
+
+    m_fAmount = data.readFloatLE(72) 
+    console.log "m_fAmount: #{m_fAmount}"
+    result += "#{m_fAmount},["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(76+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(96+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(116+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(136+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "]"
+
+    console.log "result: #{result}"
+    result = null
+
+    raw_buf = raw_buf.slice cursor+156, raw_buf.length
+    cursor = 0
+    @analyze_data cursor, raw_buf
+
+a = new A()
+a.test()

@@ -47,15 +47,21 @@ class WindTalker
 
         if @found_head 
           @message_size =  @delta.readUInt32LE(@head+4)
+          chunk_size = @delta.readUInt32LE(@head+4+4)
+          raw_data_size = @delta.readUInt32LE(@head+4+4+4)
           console.log "bingooo, got the head:#{@head}."
-          console.log "message_size: #{@message_size}"
+          console.log "message_size: #{@message_size}, chunk_size: #{chunk_size}, raw_data_size: #{raw_data_size}"
 
-      if @delta.length >= (@head + 4 + 4 + @message_size)
-        current_cursor = @head + 4 + 4
-        end_point = @head + 4 + 4 + @message_size-1
-        console.log "end_point should be #{end_point}"
-        @split_and_inflate current_cursor, end_point
-        @client.destroy()
+      if @found_head and @delta.length >= (@head + 4 + 4 + @message_size)
+        #current_cursor = @head + 4 + 4
+        #end_point = @head + 4 + 4 + @message_size-1
+        #console.log "end_point should be #{end_point}"
+        #@split_and_inflate current_cursor, end_point
+        #@client.destroy()
+        console.log "have received a complete message, delta length: #{@delta.length}"
+        @delta = @delta.slice @head+@message_size, @delta.length
+        @found_head = false
+        console.log "after slice, delta length: #{@delta.length}, found_head: #{@found_head}"
       else
         console.log "continue receiving ..."
 
