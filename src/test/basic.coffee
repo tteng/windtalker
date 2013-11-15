@@ -33,38 +33,51 @@ console.log "The CPU endian is #{os.endianness()}"
 class A
 
   test: ->
-
     fs.open __dirname + "/../../data/wsSample.wsz", 'r', (err,fd) =>
-      #wsSample.wsz 的第一个四个字节为数据长度, 第二个四个字节为zlib解压缩后数据长度
-      buf = new Buffer(4)
-      buf.fill 0
-      fs.read fd, buf, 0, 4, 0, (err, bytesRead, buf) =>
-        current_cursor = 0
-        @iterate_buf current_cursor, buf, fd
+      if err
+        console.log "[Error] read origin data failed"
+      else
+        iterate_data_file = @iterate_data_file
+        fs.stat __dirname + "/../../data/wsSample.wsz", (err, stat) =>
+          if err
+            console.log "[Error] get origin file size failed"
+          else
+            file_size = stat.size
+            console.log "origin file size: #{file_size}"
+            @iterate_data_file fd, 0, file_size
 
-  iterate_buf: (cursor, buf, fd) ->
-    if cursor < buf.length
-      buf_length = buf.readUInt32LE(cursor)
-      console.log "buff length: #{buf_length-4}"
-      fs.read fd, buf, 0, 4, cursor+4, (err, bytesRead, buf) =>
-        raw_buf_length = buf.readUInt32LE(0)
-        console.log "raw buff length: #{raw_buf_length}"
-        encrypt_data = new Buffer raw_buf_length
-        encrypt_data.fill 0
-        fs.read fd, encrypt_data, 0, raw_buf_length, 0+4+4, (err, bytesRead, buf) =>
-          analyze_data = @analyze_data
-          zlib.inflate encrypt_data, (error, result) ->
-            console.log "result length: #{result.length}"
-            if result.length % 156 isnt 0
-              console.log "warning: invalid buffer size" 
-            else
-              analyze_data 0, result
+  iterate_data_file: (fd, cursor, file_size) ->
+    if cursor >= file_size
+      console.log "reach file end, that's all."
+      return
+    meta_buf = new Buffer 8
+    meta_buf.fill 0
+    fs.read fd, meta_buf, offset=0, length=8, position=cursor, (err, bytesRead, buffer) =>
+      chunk_size = meta_buf.readUInt32LE 0
+      raw_data_size = meta_buf.readUInt32LE 4
+      data_buf = new Buffer raw_data_size
+      data_buf.fill 0
+      console.log "cursor: #{cursor}, chunk_size: #{chunk_size-4}, raw_data_size: #{raw_data_size}, copy index from #{cursor+4+4} to #{cursor+4+4+chunk_size-4-1}"
+      iterate_buf = @iterate_buf
+      fs.read fd, data_buf, 0, chunk_size-4, cursor+4+4, (err, bytesRead, buffer) =>
+        @iterate_buf data_buf, 0, raw_data_size
+      cursor = cursor+4+4+chunk_size-4
+      @iterate_data_file fd, cursor, file_size
 
-        cursor = cursor+raw_buf_length+4
-        @iterate_buf cursor, buf, fd 
-    else
-      console.log "cursor: #{cursor}, reach file end, that's all."
-
+  iterate_buf: (raw_buf, cursor, raw_data_size) ->
+    console.log "raw buf size: #{raw_buf.length}"
+    zlib.inflate raw_buf, (error, result) => 
+      if error
+        console.log "[Error] inflate data failed."
+        throw error
+      else
+        if result.length is raw_data_size
+          console.log "[Info] inflate succeed."
+          if result.length % 156 is 0
+            @analyze_data 0, result
+          else
+            consloe.log "[Error] invalid buffer size" 
+     
   analyze_data: (cursor, raw_buf) =>
     if cursor >= raw_buf.length  
       console.log "process finished." 
@@ -87,7 +100,6 @@ class A
     console.log "contract: #{contract}"
     result += "#{contract},"
 
-    #IX下成交总笔数, 不应该是小数，应该是整数
     total_deal = data.readFloatLE(32)
     console.log "total_deal: #{total_deal}"
     result += "#{total_deal},"
