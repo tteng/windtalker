@@ -33,7 +33,7 @@ console.log "The CPU endian is #{os.endianness()}"
 class A
 
   test: ->
-    fs.open __dirname + "/../../data/wsSample.wsz", 'r', (err,fd) =>
+    fs.open __dirname + "/../../data/wsSample.wsz1", 'r', (err,fd) =>
       if err
         console.log "[Error] read origin data failed"
       else
@@ -55,16 +55,16 @@ class A
     fs.read fd, meta_buf, offset=0, length=8, position=cursor, (err, bytesRead, buffer) =>
       chunk_size = meta_buf.readUInt32LE 0
       raw_data_size = meta_buf.readUInt32LE 4
-      data_buf = new Buffer raw_data_size
+      data_buf = new Buffer chunk_size
       data_buf.fill 0
       console.log "cursor: #{cursor}, chunk_size: #{chunk_size-4}, raw_data_size: #{raw_data_size}, copy index from #{cursor+4+4} to #{cursor+4+4+chunk_size-4-1}"
       iterate_buf = @iterate_buf
       fs.read fd, data_buf, 0, chunk_size-4, cursor+4+4, (err, bytesRead, buffer) =>
-        @iterate_buf data_buf, 0, raw_data_size
+        @iterate_buf data_buf, raw_data_size
       cursor = cursor+4+4+chunk_size-4
       @iterate_data_file fd, cursor, file_size
 
-  iterate_buf: (raw_buf, cursor, raw_data_size) ->
+  iterate_buf: (raw_buf, raw_data_size) ->
     console.log "raw buf size: #{raw_buf.length}"
     zlib.inflate raw_buf, (error, result) => 
       if error

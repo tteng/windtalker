@@ -6,7 +6,6 @@ os   = require 'os'
 class WindTalker
 
   constructor: (@channel, @host="121.199.14.113", @port=7781) ->
-    @delimiter_ary = ['a8', 'b9', 'c0', 'd1']
     @greeting  = "m=#{@channel};u=dellsha01;p=jason3802;EX_HEAD=a8b9c0d1;EX_SIZE=1;"
     @client    = new net.Socket()
     @delta     = new Buffer 0
@@ -18,105 +17,199 @@ class WindTalker
       console.log "Connect to #{@host}:#{@port}"
       @client.write @greeting
 
-    #
-    #  --------------------------------------------------------------------------------------
-    #  |0xA8B9C0D1| EX_SIZE | CHUNK_SIZE| RAW_SIZE |        BINARYDATA                      |
-    #  -------------------------------------------------------------------------------------|
-    #  |  4bytes  | 4bytes  |  4bytes   |  4bytes  |        BINARYDATA                      |
-    #  -------------------------------------------------------------------------------------|
-    #  |  4bytes  |MSG_SIZE |CHUNK_SIZE | RAW_SIZE |        BINARYDATA                      |
-    #  --------------------------------------------|------------长度为CHUNKSIZE-4-----------|
-    #                                              |----------解压后长度为RAWSIZE-----------|
-    #                                              -----------------------------------------|
-    #                       |-------------------------长度为MSG_SIZE------------------------|
-    #                                                                                       |
-    #  ↑                    ↑                                                              ↑
-    #  head                 current_cursor                                                 end_point
- 
-
     @client.on 'data', (data) =>
       @delta = Buffer.concat [@delta, data]
       unless @found_head
         unless @delta.length < 16
-          for bite, i in @delta 
-            #console.log @delta[i].toString('16')
-            if @isHead(data, i)
-              @head = i 
-              @found_head = true
-              break
+          @detect_head @delta  
+      
+      if @found_head and @message_size is 0
+        console.log "delta length: #{@delta.length}, head: #{@head}"
+        console.log "detecting message size ...."
+        @detect_message_size()
 
-        if @found_head 
-          @message_size =  @delta.readUInt32LE(@head+4)
-          chunk_size = @delta.readUInt32LE(@head+4+4)
-          raw_data_size = @delta.readUInt32LE(@head+4+4+4)
-          console.log "bingooo, got the head:#{@head}."
-          console.log "message_size: #{@message_size}, chunk_size: #{chunk_size}, raw_data_size: #{raw_data_size}"
+      if @message_size > 0
+        if @received_complete_message()
+          console.log "@delta_length: #{@delta.length}, received enougth message"
+          @split_buffer_and_decode()
+          @client.destroy()
 
-      if @found_head and @delta.length >= (@head + 4 + 4 + @message_size)
-        #current_cursor = @head + 4 + 4
-        #end_point = @head + 4 + 4 + @message_size-1
-        #console.log "end_point should be #{end_point}"
-        #@split_and_inflate current_cursor, end_point
-        #@client.destroy()
-        console.log "have received a complete message, delta length: #{@delta.length}"
-        @delta = @delta.slice @head+@message_size, @delta.length
-        @found_head = false
-        console.log "after slice, delta length: #{@delta.length}, found_head: #{@found_head}"
+  received_complete_message: ->
+    @delta.length >= @head + 4 + 4 + @message_size 
+
+  split_buffer_and_decode: -> 
+    wild_buf = new Buffer @message_size   
+    wild_buf.fill 0
+    ##doc
+    ## buf.copy(targetBuffer, [targetStart], [sourceStart], [sourceEnd])
+    ##
+    @delta.copy wild_buf, 0, @head+4+4, @head+4+4+@message_size-1
+    @delta = @delta.slice @head+4+4+@message_size, @delta.length 
+    [@message_size, @head, @found_head] = [0, 0, false]
+
+    #fs.write(fd, buffer, offset, length, position, callback)
+    #fs.open "/home/shreadline/data.wsz", 'w', (err,fd) ->
+    #  if err
+    #    console.log "[Error] open /home/shreadline/data.wsz failed"
+    #  else
+    #    fs.write fd, wild_buf, 0, wild_buf.length, 0, (err, written, buffer) ->
+    #      if err
+    #        console.log "[Error] write /home/shreadline/data.wsz failed"
+    #      else
+    #        console.log "[Info] write /home/shreadline/data.wsz succeed"
+    @decode_buf wild_buf, 0
+
+  decode_buf: (buf, cursor) ->
+    return if cursor >= buf.length
+    chunk_size = buf.readUInt32LE cursor
+    raw_data_size = buf.readUInt32LE cursor+4
+    console.log "chunk_size: #{chunk_size-4}, raw_data_size: #{raw_data_size}, valid: #{(raw_data_size % 156 is 0) ? true :false}"    
+    raw_data_buf = new Buffer chunk_size-4 
+    raw_data_buf.fill 0
+    buf.copy raw_data_buf, 0, cursor+4+4, cursor+4+4+chunk_size-4-1
+    @inflate_and_iterate_buf raw_data_buf, raw_data_size
+    cursor = cursor+4+4+chunk_size-4
+    #@decode_buf buf, cursor
+
+  inflate_and_iterate_buf: (raw_buf, raw_data_size) ->
+    console.log "raw buf size: #{raw_buf.length}"
+    zlib.inflate raw_buf, (error, result) => 
+      if error
+        console.log "[Error] inflate data failed."
+        throw error
       else
-        console.log "continue receiving ..."
+        if result.length is raw_data_size
+          console.log "[Info] inflate succeed."
+          if result.length % 156 is 0
+            @analyze_data 0, result
+          else
+            consloe.log "[Error] invalid buffer size" 
 
-    @client.on 'close', ->
-      console.log "Connection closed."
+  analyze_data: (cursor, raw_buf) =>
+    if cursor >= raw_buf.length  
+      console.log "process finished." 
+      return
+    console.log "analyzing..."
+    data = new Buffer 156
+    data.fill 0
+    result = ''
+    buf = raw_buf.copy data, 0, cursor, cursor+156-1
 
-  #
-  #  --------------------------------------------------------------------------------------
-  #  |0xA8B9C0D1| EX_SIZE | CHUNK_SIZE| RAW_SIZE |        BINARYDATA                      |
-  #  -------------------------------------------------------------------------------------|
-  #  |  4bytes  | 4bytes  |  4bytes   |  4bytes  |        BINARYDATA                      |
-  #  -------------------------------------------------------------------------------------|
-  #  |  4bytes  |MSG_SIZE |CHUNK_SIZE | RAW_SIZE |        BINARYDATA                      |
-  #                       |-------------------------长度为MSG_SIZE------------------------------------------|
-  #  --------------------------------------------|------------长度为CHUNKSIZE-4-----------|
-  #                                              |----------解压后长度为RAWSIZE-----------|
-  #                                              -----------------------------------------|
-  #  ↑                    ↑                       ↑                                      ↑                 ↑
-  #  head                 current_cursor          chunk_start                            chunk_end         end_point
- 
+    time_t = data.readUInt32LE(0)         
+    console.log "time_t: #{time_t}"
+    result += "#{time_t},"
 
-  split_and_inflate: (current_cursor, end_point) ->
-    if current_cursor < end_point
-      console.log "current_cursor: #{current_cursor}"
-      chunk_size    = @delta.readUInt32LE current_cursor
-      raw_data_size = @delta.readUInt32LE current_cursor+4
-      console.log "----------- current cursor is #{current_cursor} ----------------"
-      chunk_start   = current_cursor + 8
-      chunk_end     = chunk_start + chunk_size-1
-      console.log "chunk_size: #{chunk_size}"
-      console.log "raw_data_size: #{raw_data_size}"
-      compressed_data = new Buffer chunk_size
-      compressed_data.fill 0
-      @delta.copy compressed_data, 0, chunk_start, chunk_end
-      zlib.inflate compressed_data, (error, result) =>
-        throw error if error
-        console.log "uncompressed data size: #{result.length}"
-        console.log "current_cursor in callback: #{current_cursor}"
-        current_cursor = chunk_end + 1-4
-        console.log "next current cursor should be: #{current_cursor}"
-        console.log "end_point in callback: #{end_point}"
-        @split_and_inflate current_cursor, end_point
+    market = data.toString 'ascii', 4, 15
+    console.log "mar: #{market}"
+    result += "#{market},"
 
-  isHead: (buff, idx) ->
+    contract = data.toString 'ascii', 16, 31 
+    console.log "contract: #{contract}"
+    result += "#{contract},"
+
+    total_deal = data.readFloatLE(32)
+    console.log "total_deal: #{total_deal}"
+    result += "#{total_deal},"
+
+    latest_deal = data.readFloatLE(36)  
+    console.log "latest_deal: #{latest_deal}"
+    result += "#{latest_deal},"
+
+    holding = data.readFloatLE(40)
+    console.log "holding: #{holding}"
+    result += "#{holding},"
+
+    feature_price = data.readFloatLE(44)
+    console.log "feature_price: #{feature_price}"
+    result += "#{feature_price},"
+
+    m_fLastClose = data.readFloatLE(48)
+    console.log "m_fLastClose: #{m_fLastClose}"
+    result += "#{m_fLastClose},"
+
+    m_fOpen = data.readFloatLE(52)
+    console.log "m_fOpen: #{m_fOpen}"
+    result += "#{m_fOpen},"
+
+    m_fHigh = data.readFloatLE(56)
+    console.log "m_fHigh: #{m_fHigh}"
+    result += "#{m_fHigh},"
+
+    m_fLow = data.readFloatLE(60)
+    console.log "m_fLow: #{m_fLow}"
+    result += "#{m_fLow},"
+
+    m_fNewPrice = data.readFloatLE(64) 
+    console.log "m_fNewPrice: #{m_fNewPrice}"
+    result += "#{m_fNewPrice},"
+
+    m_fVolume = data.readFloatLE(68) 
+    console.log "m_fNewPrice: #{m_fVolume}"
+    result += "#{m_fVolume},"
+
+    m_fAmount = data.readFloatLE(72) 
+    console.log "m_fAmount: #{m_fAmount}"
+    result += "#{m_fAmount},["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(76+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(96+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(116+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    while i < 5
+      val = data.readFloatLE(136+i*4) 
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "]"
+
+    console.log "result: #{result}"
+    result = null
+
+    raw_buf = raw_buf.slice cursor+156, raw_buf.length
+    cursor = 0
+    @analyze_data cursor, raw_buf
+
+
+
+  detect_head: ->
+    for bite, i in @delta 
+      if @is_head(@delta, i)
+        @head = i 
+        @found_head = true
+        console.log "head is: #{@head}"
+        break
+
+  detect_message_size: ->
+    if @delta.length >= @head + 4 + 4  #0xA8B9C0D1: 4bytes, MSG_SIZE: 4bytes
+      console.log "load enough data to read message size"
+      @message_size = @delta.readUInt32LE @head+4
+      console.log "message size: #{@message_size}" 
+
+  #helper, detect stream head.
+  is_head: (buff, idx) ->
     result = false
     bite = buff[idx]
-   
-    #### have no idea why this fail ####
-    #if bite.toString('16').toLowerCase() is @delimiter_ary[3]
-    #  if buff[idx+1] and buff[idx+1].toString('16').toLowerCase() is @delimiter_ary[2]
-    #    if buff[idx+2] and buff[idx+2].toString('16').toLowerCase() is @delimiter_ary[1]
-    #      if buff[idx+3] and buff[idx+3].toString('16').toLowerCase() is @delimiter_ary[0]
-    #        result = true
-    #result
-
     if bite and bite.toString('16').toLowerCase() is 'd1'
       if buff[idx+1] and buff[idx+1].toString('16').toLowerCase() is 'c0'
         if buff[idx+2] and buff[idx+2].toString('16').toLowerCase() is 'b9'
@@ -126,3 +219,5 @@ class WindTalker
 
 w = new WindTalker('IX')
 w.listen()
+
+  
