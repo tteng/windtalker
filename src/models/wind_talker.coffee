@@ -2,11 +2,13 @@ fs   = require 'fs'
 zlib = require 'zlib'
 net  = require 'net'
 os   = require 'os'
+settings = require '../config/settings'
 
 class WindTalker
 
-  constructor: (@channel, @host="121.199.14.113", @port=7781) ->
-    @greeting  = "m=#{@channel};u=dellsha01;p=jason3802;EX_HEAD=a8b9c0d1;EX_SIZE=1;"
+  constructor: (@channel, @host, @port) ->
+    @greeting  = "m=#{@channel};u=#{settings.username};p=#{settings.password};EX_HEAD=a8b9c0d1;EX_SIZE=1;"
+    console.log "greeting: #{@greeting}"
     @client    = new net.Socket()
     @delta     = new Buffer 0
     [@message_size, @head, @found_head] = [0, 0, false]
@@ -40,23 +42,9 @@ class WindTalker
   split_buffer_and_decode: -> 
     wild_buf = new Buffer @message_size   
     wild_buf.fill 0
-    ##doc
-    ## buf.copy(targetBuffer, [targetStart], [sourceStart], [sourceEnd])
-    ##
     @delta.copy wild_buf, 0, @head+4+4, @head+4+4+@message_size
     @delta = @delta.slice @head+4+4+@message_size, @delta.length 
     [@message_size, @head, @found_head] = [0, 0, false]
-
-    #fs.write(fd, buffer, offset, length, position, callback)
-    #fs.open "/home/shreadline/data.wsz", 'w', (err,fd) ->
-    #  if err
-    #    console.log "[Error] open /home/shreadline/data.wsz failed"
-    #  else
-    #    fs.write fd, wild_buf, 0, wild_buf.length, 0, (err, written, buffer) ->
-    #      if err
-    #        console.log "[Error] write /home/shreadline/data.wsz failed"
-    #      else
-    #        console.log "[Info] write /home/shreadline/data.wsz succeed"
     @decode_buf wild_buf, 0
 
   decode_buf: (buf, cursor) ->
@@ -217,7 +205,7 @@ class WindTalker
             result = true
     result
 
-w = new WindTalker('IX')
+w = new WindTalker('IX', settings.host, settings.port)
 w.listen()
 
   
