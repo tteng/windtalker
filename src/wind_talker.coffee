@@ -32,7 +32,7 @@ class WindTalker
         if @received_complete_message()
           console.log "@delta_length: #{@delta.length}, received enougth message"
           @split_buffer_and_decode()
-          @client.destroy()
+          #@client.destroy()
 
   received_complete_message: ->
     @delta.length >= @head + 4 + 4 + @message_size 
@@ -43,7 +43,7 @@ class WindTalker
     ##doc
     ## buf.copy(targetBuffer, [targetStart], [sourceStart], [sourceEnd])
     ##
-    @delta.copy wild_buf, 0, @head+4+4, @head+4+4+@message_size-1
+    @delta.copy wild_buf, 0, @head+4+4, @head+4+4+@message_size
     @delta = @delta.slice @head+4+4+@message_size, @delta.length 
     [@message_size, @head, @found_head] = [0, 0, false]
 
@@ -66,10 +66,10 @@ class WindTalker
     console.log "chunk_size: #{chunk_size-4}, raw_data_size: #{raw_data_size}, valid: #{(raw_data_size % 156 is 0) ? true :false}"    
     raw_data_buf = new Buffer chunk_size-4 
     raw_data_buf.fill 0
-    buf.copy raw_data_buf, 0, cursor+4+4, cursor+4+4+chunk_size-4-1
+    buf.copy raw_data_buf, 0, cursor+4+4, cursor+4+4+chunk_size-4
     @inflate_and_iterate_buf raw_data_buf, raw_data_size
     cursor = cursor+4+4+chunk_size-4
-    #@decode_buf buf, cursor
+    @decode_buf buf, cursor
 
   inflate_and_iterate_buf: (raw_buf, raw_data_size) ->
     console.log "raw buf size: #{raw_buf.length}"
@@ -93,7 +93,7 @@ class WindTalker
     data = new Buffer 156
     data.fill 0
     result = ''
-    buf = raw_buf.copy data, 0, cursor, cursor+156-1
+    buf = raw_buf.copy data, 0, cursor, cursor+156
 
     time_t = data.readUInt32LE(0)         
     console.log "time_t: #{time_t}"

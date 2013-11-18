@@ -33,7 +33,7 @@ console.log "The CPU endian is #{os.endianness()}"
 class A
 
   test: ->
-    fs.open __dirname + "/../../data/wsSample.wsz1", 'r', (err,fd) =>
+    fs.open __dirname + "/../../data/wsSample.wsz", 'r', (err,fd) =>
       if err
         console.log "[Error] read origin data failed"
       else
