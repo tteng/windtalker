@@ -132,7 +132,7 @@ class WindTalker
     result += "#{m_fNewPrice},"
 
     m_fVolume = data.readFloatLE(68) 
-    console.log "m_fNewPrice: #{m_fVolume}"
+    console.log "m_fVolume: #{m_fVolume}"
     result += "#{m_fVolume},"
 
     m_fAmount = data.readFloatLE(72) 
