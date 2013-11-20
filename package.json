@@ -9,7 +9,8 @@
     "iconv": "2.0.7",
     "redis": "0.9.0",
     "hiredis": "0.1.15",
-    "mocha": "1.14.0"
+    "mocha": "1.14.0",
+    "node-schedule": "0.1.13"
   },
   "scripts" : {
     "test" : "expresso"

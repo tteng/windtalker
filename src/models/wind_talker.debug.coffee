@@ -8,12 +8,15 @@ class WindTalker
 
   constructor: (@channel, @host, @port) ->
     @greeting  = "m=#{@channel};u=#{settings.username};p=#{settings.password};EX_HEAD=a8b9c0d1;EX_SIZE=1;"
+    console.log "greeting: #{@greeting}"
     @client    = new net.Socket()
     @delta     = new Buffer 0
     [@message_size, @head, @found_head] = [0, 0, false]
+    console.log "The cpu endian is #{os.endianness()}" 
 
   listen: ->
     @client.connect @port, @host, =>
+      console.log "Connect to #{@host}:#{@port}"
       @client.write @greeting
 
     @client.on 'data', (data) =>
@@ -23,10 +26,13 @@ class WindTalker
           @detect_head @delta  
       
       if @found_head and @message_size is 0
+        console.log "delta length: #{@delta.length}, head: #{@head}"
+        console.log "detecting message size ...."
         @detect_message_size()
 
       if @message_size > 0
         if @received_complete_message()
+          console.log "@delta_length: #{@delta.length}, received enougth message"
           @split_buffer_and_decode()
 
   received_complete_message: ->
@@ -44,6 +50,7 @@ class WindTalker
     return if cursor >= buf.length
     chunk_size = buf.readUInt32LE cursor
     raw_data_size = buf.readUInt32LE cursor+4
+    console.log "chunk_size: #{chunk_size-4}, raw_data_size: #{raw_data_size}, valid: #{(raw_data_size % 156 is 0) ? true :false}"    
     raw_data_buf = new Buffer chunk_size-4 
     raw_data_buf.fill 0
     buf.copy raw_data_buf, 0, cursor+4+4, cursor+4+4+chunk_size-4
@@ -52,11 +59,14 @@ class WindTalker
     @decode_buf buf, cursor
 
   inflate_and_iterate_buf: (raw_buf, raw_data_size) ->
+    console.log "raw buf size: #{raw_buf.length}"
     zlib.inflate raw_buf, (error, result) => 
       if error
+        console.log "[Error] inflate data failed."
         throw error
       else
         if result.length is raw_data_size
+          console.log "[Info] inflate succeed."
           if result.length % 156 is 0
             @analyze_data 0, result
           else
@@ -64,7 +74,9 @@ class WindTalker
 
   analyze_data: (cursor, raw_buf) =>
     if cursor >= raw_buf.length  
+      console.log "process finished." 
       return
+    console.log "analyzing..."
     data = new Buffer 156
     data.fill 0
     result = ''
