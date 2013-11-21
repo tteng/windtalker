@@ -13,8 +13,8 @@ process.on 'message', (msg) ->
 
 process.on 'exit', ->
   console.log 'EXIT ....'
-  process.send "[CHILD] process##{process.pid} exit."
   stock_ix.stop()
+  process.send "[CHILD] process##{process.pid} exit."
 
 process.on 'SIGTERM', ->
   console.log 'SIGTERM ....'
