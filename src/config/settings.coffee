@@ -11,4 +11,10 @@ Settings =
     us: ['1,2,3,4,5,6', '22:30-05:00']
     #mt: ['1-6',       '06:00-05:00']
 
+  redisHost: "127.0.0.1",
+
+  redisHost: "127.0.0.1",
+
+  redisNamespace: "thsocket"
+
 module.exports = Settings

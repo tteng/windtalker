@@ -1,9 +1,11 @@
-settings = require '../config/settings'
+settings   = require '../config/settings'
+logger   = require '../config/logger'
 schedule = require 'node-schedule'
 
 class Dispatcher
 
   constructor: ->
+    logger.warn "welcome ..."
     @jobs = {}
     
   startJob: (job) ->
@@ -34,8 +36,8 @@ class Dispatcher
 
   assignSchedule: (job) ->
     console.log "going to assign schedule for #{job}"
-    this["#{job}Schedule"].call()
-    @invokeJob job if this["#{job}JobCouldBeInvoked"].call()
+    @["#{job}Schedule"].call()
+    @invokeJob job if @["#{job}JobCouldBeInvoked"].call()
 
   ixSchedule: ->
     ruleStart = new schedule.RecurrenceRule()
@@ -212,7 +214,7 @@ exports.Dispatcher = Dispatcher
 
 dsp = new Dispatcher()
 
-dsp.startJob 'hk'
+dsp.startJob 'ix'
 
 process.on 'exit', ->
   console.log '[PARENT] going to exit.' 
