@@ -3,6 +3,7 @@ zlib = require 'zlib'
 net  = require 'net'
 os   = require 'os'
 settings = require '../config/settings'
+redis    = require('../db/redis_util').createClient()
 
 class WindTalker
 
@@ -89,5 +90,127 @@ class WindTalker
 
   stop: ->
     @client.destroy()
+
+  analyze_data: (cursor, raw_buf) =>
+    if cursor >= raw_buf.length  
+      console.log "process finished." 
+      return
+    data = new Buffer 156
+    data.fill 0
+    result = ''
+    buf = raw_buf.copy data, 0, cursor, cursor+156
+
+    time_t = data.readUInt32LE(0)         
+    result += "#{time_t},"
+
+    for i in [4..15]
+      break if data[i] is 0 
+
+    market = data.toString('ascii', 4, i)  #market ends with unicode 0, if not truncate it, redis can't save it as a common string key 
+    result += "#{market},"
+
+    for j in [16..31]
+      break if data[j] is 0
+    contract = data.toString 'ascii', 16, j
+    result += "#{contract},"
+
+    total_deal = data.readFloatLE(32)
+    result += "#{total_deal},"
+
+    latest_deal = data.readFloatLE(36)  
+    result += "#{latest_deal},"
+
+    holding = data.readFloatLE(40)
+    result += "#{holding},"
+
+    feature_price = data.readFloatLE(44)
+    result += "#{feature_price},"
+
+    m_fLastClose = data.readFloatLE(48)
+    result += "#{m_fLastClose},"
+
+    m_fOpen = data.readFloatLE(52)
+    result += "#{m_fOpen},"
+
+    m_fHigh = data.readFloatLE(56)
+    result += "#{m_fHigh},"
+
+    m_fLow = data.readFloatLE(60)
+    result += "#{m_fLow},"
+
+    m_fNewPrice = data.readFloatLE(64) 
+    result += "#{m_fNewPrice},"
+
+    m_fVolume = data.readFloatLE(68) 
+    result += "#{m_fVolume},"
+
+    m_fAmount = data.readFloatLE(72) 
+    result += "#{m_fAmount},["
+
+    i = 0
+    buyBids = []                                #申买价
+    while i < 5
+      val = data.readFloatLE(76+i*4) 
+      buyBids.push val
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    buyAmount = []                              #申买量
+    while i < 5
+      val = data.readFloatLE(96+i*4) 
+      buyAmount.push val
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    sellBids = []                               #申卖价
+    while i < 5
+      val = data.readFloatLE(116+i*4) 
+      sellBids.push val
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "],["
+
+    i = 0
+    sellAmount = []                              #申卖量
+    while i < 5
+      val = data.readFloatLE(136+i*4) 
+      sellAmount.push val
+      result += "#{val}"
+      result += "," unless i == 4
+      i+=1
+    result += "]"
+
+    @saveToDb time_t, market, m_fLastClose, m_fOpen, m_fHigh, m_fLow, m_fNewPrice, m_fVolume, m_fAmount
+
+    #console.log "result: #{result}"
+    result = null
+
+    raw_buf = raw_buf.slice cursor+156, raw_buf.length
+    cursor = 0
+    @analyze_data cursor, raw_buf
+
+  saveToDb: (time, ticker, fLastClose, fOpen, fHigh, fLow, fNewPrice, fVolume, fAmount) ->
+    #console.log "#{time}, #{ticker}, #{fLastClose}, #{fOpen}, #{fHigh}, #{fLow}, #{fNewPrice}, #{fVolume}, #{fAmount}"
+    if key = @redisKey ticker
+      redis.hmset(key, {
+                        "t":       time, 
+                        "close":   fLastClose, 
+                        "open":    fOpen, 
+                        "high":    fHigh, 
+                        "low":     fLow, 
+                        "current": fNewPrice, 
+                        "volume":  fVolume, 
+                        "amount":  fAmount
+                       }, (err, result) ->
+                            console.log key if result
+                            console.error "[REDIS][ERROR] update #{corresponding_key} failed for #{err}." if err
+                 )
 
 module.exports = WindTalker

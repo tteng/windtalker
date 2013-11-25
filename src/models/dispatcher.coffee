@@ -1,4 +1,4 @@
-settings   = require '../config/settings'
+settings = require '../config/settings'
 logger   = require '../config/logger'
 schedule = require 'node-schedule'
 
@@ -214,7 +214,7 @@ exports.Dispatcher = Dispatcher
 
 dsp = new Dispatcher()
 
-dsp.startJob 'ix'
+dsp.startJob 'sz'
 
 process.on 'exit', ->
   console.log '[PARENT] going to exit.' 
