@@ -1,3 +1,3 @@
-#!/bin/bash
+#!/usr/bin/env bash
 forever start --pidFile $PWD/pids/windtalker.pid -a -l $PWD/logs/windtalker.log $PWD/lib/models/dispatcher.js
 echo "done."
