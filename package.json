@@ -10,7 +10,8 @@
     "redis": "0.9.0",
     "hiredis": "0.1.15",
     "mocha": "1.14.0",
-    "node-schedule": "0.1.13"
+    "node-schedule": "0.1.13",
+    "forever": "0.10.9"
   },
   "scripts" : {
     "test" : "expresso"

@@ -57,9 +57,3 @@ process.on 'SIGTERM', ->
   process.send "[CHILD][StockIX] process##{process.pid} terminated."
   process.exit 0
 
-#not work
-process.stdin.on 'data', (msg) ->
-  console.log "[CHILD][StockIX] process##{process.pid} stdout: #{msg}"
-
-process.stderr.on 'data', (msg) ->
-  console.log "[CHILD][StockIX] process##{process.pid} stderr: #{msg}"

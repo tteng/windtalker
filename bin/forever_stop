@@ -1,0 +1,3 @@
+#!/bin/bash
+forever stop --pidFile $PWD/pids/windtalker.pid $PWD/lib/models/dispatcher.js
+echo "done."
