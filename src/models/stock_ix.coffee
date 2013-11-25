@@ -44,8 +44,10 @@ class StockIX extends WindTalker
     time_t = data.readUInt32LE(0)         
     result += "#{time_t},"
 
-    market = data.toString('ascii', 4, 15).replace "\u0000.*", ''
-    console.log market
+    for i in [4..15]
+      break if data[i] is 0 
+
+    market = data.toString('ascii', 4, i)  #market ends with unicode 0, if not truncate it, redis can't save it as a common string key 
     result += "#{market},"
 
     contract = data.toString 'ascii', 16, 31 
@@ -135,41 +137,23 @@ class StockIX extends WindTalker
 
 
   saveToDb: (time, ticker, fLastClose, fOpen, fHigh, fLow, fNewPrice, fVolume, fAmount) ->
-    console.log "saving to db ..."
-    console.log "#{time}, #{ticker}, #{fLastClose}, #{fOpen}, #{fHigh}, #{fLow}, #{fNewPrice}, #{fVolume}, #{fAmount}"
-    #corresponding_key = @keys_map[ticker]
-    #corresponding_key = ticker if ticker in ['IXFXNZDUSD', 'IXFXUSDTRY', 'IXIXUDI']
+    corresponding_key = @keys_map[ticker]
+    corresponding_key = ticker if ticker in ['IXFXNZDUSD', 'IXFXUSDTRY', 'IXIXUDI']
     corresponding_key = ticker
     if corresponding_key
       key = "#{settings.redisNamespace}:IX:#{corresponding_key}"
-      key = corresponding_key
-      console.log key
-      redis.HMSET(key, "t", time, 
-                       "close",   fLastClose, 
-                       "open",    fOpen, 
-                       "high",    fHigh, 
-                       "low",     fLow, 
-                       "current", fNewPrice, 
-                       "volume",  fVolume, 
-                       "amount",  fAmount
-                       , (err, result) ->
-                            console.log "[IX] [#{key}] #{result}"
-                            console.error "[IX] update #{corresponding_key} failed for #{err}." if err
+      redis.hmset(key, {
+                        "t":       "#{time}", 
+                        "close":   "#{fLastClose}", 
+                        "open":    "#{fOpen}", 
+                        "high":    "#{fHigh}", 
+                        "low":     "#{fLow}", 
+                        "current": "#{fNewPrice}", 
+                        "volume":  "#{fVolume}", 
+                        "amount":  "#{fAmount}"
+                       }, (err, result) ->
+                            console.error "[REDIS][ERROR][IX] update #{corresponding_key} failed for #{err}." if err
                  )
-
-      #redis.hmset(key, {
-      #                  "t":       "#{time}", 
-      #                  "close":   "#{fLastClose}", 
-      #                  "open":    "#{fOpen}", 
-      #                  "high":    "#{fHigh}", 
-      #                  "low":     "#{fLow}", 
-      #                  "current": "#{fNewPrice}", 
-      #                  "volume":  "#{fVolume}", 
-      #                  "amount":  "#{fAmount}"
-      #                 }, (err, result) ->
-      #                      console.log "[IX] [#{key}] #{result}"
-      #                      console.error "[IX] update #{corresponding_key} failed for #{err}." if err
-      #           )
 
 stock_ix = new StockIX 'IX', settings.host, settings.port
 
