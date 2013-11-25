@@ -214,7 +214,8 @@ exports.Dispatcher = Dispatcher
 
 dsp = new Dispatcher()
 
-dsp.startJob 'sz'
+#dsp.startJob 'sz'
+dsp.startAll()
 
 process.on 'exit', ->
   console.log '[PARENT] going to exit.' 
