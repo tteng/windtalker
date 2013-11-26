@@ -39,7 +39,9 @@ class Dispatcher
     @["#{job}Schedule"].call()
     @invokeJob job if @["#{job}JobCouldBeInvoked"].call()
 
-  ixSchedule: ->
+  ixSchedule: =>
+    stopJob = @stopJob
+    invokeJob = @invokeJob
     ruleStart = new schedule.RecurrenceRule()
     ruleStart.dayOfWeek = [1]
     ruleStart.hour = 6
@@ -64,7 +66,9 @@ class Dispatcher
     return true if dayIdx == 6 and hour <= 4
     return false
 
-  shSchedule: ->
+  shSchedule: =>
+    stopJob = @stopJob
+    invokeJob = @invokeJob
     ruleMorStart = new schedule.RecurrenceRule()
     ruleMorStart.dayOfWeek = [1,2,3,4,5]
     ruleMorStart.hour = 9
@@ -105,7 +109,9 @@ class Dispatcher
     return true if hour >= 13 and hour < 15
     return false
 
-  szSchedule: ->
+  szSchedule: =>
+    stopJob = @stopJob
+    invokeJob = @invokeJob
     ruleMorStart = new schedule.RecurrenceRule()
     ruleMorStart.dayOfWeek = [1,2,3,4,5]
     ruleMorStart.hour = 9
@@ -146,7 +152,9 @@ class Dispatcher
     return true if hour >= 13 and hour < 15
     return false
 
-  hkSchedule: ->
+  hkSchedule: =>
+    stopJob = @stopJob
+    invokeJob = @invokeJob
     ruleMorStart = new schedule.RecurrenceRule()
     ruleMorStart.dayOfWeek = [1,2,3,4,5]
     ruleMorStart.hour = 9
@@ -186,7 +194,9 @@ class Dispatcher
     return true if hour >= 13 and hour < 16
     return false
 
-  usSchedule: ->
+  usSchedule: =>
+    stopJob = @stopJob
+    invokeJob = @invokeJob
     ruleMorStart = new schedule.RecurrenceRule()
     ruleMorStart.dayOfWeek = [1,2,3,4,5]
     ruleMorStart.hour = 22
