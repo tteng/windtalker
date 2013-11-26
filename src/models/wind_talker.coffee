@@ -45,12 +45,18 @@ class WindTalker
     return if cursor >= buf.length
     chunk_size = buf.readUInt32LE cursor
     raw_data_size = buf.readUInt32LE cursor+4
-    raw_data_buf = new Buffer chunk_size-4 
-    raw_data_buf.fill 0
-    buf.copy raw_data_buf, 0, cursor+4+4, cursor+4+4+chunk_size-4
-    @inflate_and_iterate_buf raw_data_buf, raw_data_size
-    cursor = cursor+4+4+chunk_size-4
-    @decode_buf buf, cursor
+    try
+      raw_data_buf = new Buffer chunk_size-4 
+      raw_data_buf.fill 0
+    catch error
+      console.log "[Error][AllocateMemoryFailed]"
+      raw_data_buf = null
+    
+    if raw_data_buf 
+      buf.copy raw_data_buf, 0, cursor+4+4, cursor+4+4+chunk_size-4
+      @inflate_and_iterate_buf raw_data_buf, raw_data_size
+      cursor = cursor+4+4+chunk_size-4
+      @decode_buf buf, cursor
 
   inflate_and_iterate_buf: (raw_buf, raw_data_size) ->
     zlib.inflate raw_buf, (error, result) => 
