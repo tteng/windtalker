@@ -52,7 +52,7 @@ class Dispatcher
     ruleStop = new schedule.RecurrenceRule()
     ruleStop.dayOfWeek = [6]
     ruleStart.hour = 5
-    ruleStart.minute = 0
+    ruleStart.minute = 1
     schedule.scheduleJob ruleStop, =>
       @stopJob 'ix'
 
@@ -93,7 +93,7 @@ class Dispatcher
     ruleAftStop = new schedule.RecurrenceRule()
     ruleAftStop.dayOfWeek = [1,2,3,4,5]
     ruleAftStop.hour = 15
-    ruleAftStop.minute = 0
+    ruleAftStop.minute = 1
     schedule.scheduleJob ruleAftStop, =>
       @stopJob 'sh'
 
@@ -136,7 +136,7 @@ class Dispatcher
     ruleAftStop = new schedule.RecurrenceRule()
     ruleAftStop.dayOfWeek = [1,2,3,4,5]
     ruleAftStop.hour = 15
-    ruleAftStop.minute = 0
+    ruleAftStop.minute = 1
     schedule.scheduleJob ruleAftStop, =>
       @stopJob 'sz'
 
@@ -179,7 +179,7 @@ class Dispatcher
     ruleAftStop = new schedule.RecurrenceRule()
     ruleAftStop.dayOfWeek = [1,2,3,4,5]
     ruleAftStop.hour = 16
-    ruleAftStop.minute = 0
+    ruleAftStop.minute = 1
     schedule.scheduleJob ruleAftStop, =>
       @stopJob 'hk'
 
@@ -207,7 +207,7 @@ class Dispatcher
     ruleMorStop = new schedule.RecurrenceRule()
     ruleMorStop.dayOfWeek = [2,3,4,5,6]
     ruleMorStop.hour = 5 
-    ruleMorStop.minute = 0
+    ruleMorStop.minute = 1
     schedule.scheduleJob ruleMorStop, =>
       @stopJob 'us'
 
