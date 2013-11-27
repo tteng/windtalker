@@ -17,4 +17,6 @@ Settings =
 
   redisNamespace: "thsocket"
 
+  debug: false
+
 module.exports = Settings

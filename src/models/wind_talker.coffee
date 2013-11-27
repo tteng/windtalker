@@ -61,7 +61,7 @@ class WindTalker
   inflate_and_iterate_buf: (raw_buf, raw_data_size) ->
     zlib.inflate raw_buf, (error, result) => 
       if error
-        throw error
+        throw error if settings.debug
       else
         if result.length is raw_data_size
           if result.length % 156 is 0
