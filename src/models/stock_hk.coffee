@@ -3,8 +3,11 @@ settings   = require '../config/settings'
 
 class StockHK extends WindTalker
 
+  ticker_regexp: ->
+    /^hk0/i
+
   redisKey: (ticker) ->
-    if ticker
+    if ticker and @ticker_regexp.test ticker
       key = "#{settings.redisNamespace}:HK:#{ticker}"
     else
       null
