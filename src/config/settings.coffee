@@ -1,8 +1,8 @@
 Settings = 
   host:     '121.199.14.113',
   port:     7781,
-  username: 'dellsha01',
-  password: 'jason3802',
+  username: process.env.WTALKER_UNAME,
+  password: process.env.WTALKER_PWD,
   channels:
     ix: ['1-6',       '06:00-05:00'],
     sh: ['1,2,3,4,5', '09:15-11:30, 13:00-15:00'],
