@@ -16,6 +16,10 @@ class Dispatcher
     @jobs[job] = stock_job
     stock_job.on 'message', (msg) ->
       console.log "[PARENT][RECEIVE] #{msg}"
+      if msg instanceof Error #if any child dies unexpectly, kill the mornitor tree.
+        @stopAll()
+        setTimeout (-> process.kill 'SIGTERM') , 5000
+       
     stock_job.send 'start'
 
   restartJob: (job) ->
@@ -233,4 +237,5 @@ process.on 'exit', ->
 
 process.on 'SIGTERM', ->
   console.log '[PARENT] got SIGTERM ....'
-  process.exit 0
+  dsp.stopAll()
+  setTimeout (-> process.exit 0), 5000

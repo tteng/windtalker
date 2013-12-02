@@ -25,6 +25,11 @@ process.on 'exit', ->
   stock_hk.stop()
   process.send "[CHILD][StockHK] process##{process.pid} exit."
 
+process.on 'error', (err) ->
+  console.log '[CHILD][HK] Internal Error #{err} Occured.'
+  process.send err
+  process.exit 1
+
 process.on 'SIGTERM', ->
   console.log 'SIGTERM ....'
   process.send "[CHILD][StockHK] process##{process.pid} terminated."

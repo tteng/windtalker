@@ -16,6 +16,11 @@ process.on 'message', (msg) ->
     stock_us.listen()
   process.send "[CHILD][US] process##{process.pid} copy #{msg}."
 
+process.on 'error', (err) ->
+  console.log '[CHILD][US] Internal Error #{err} Occured.'
+  process.send err
+  process.exit 1
+
 process.on 'exit', ->
   console.log 'EXIT ....'
   stock_us.stop()

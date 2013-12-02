@@ -21,6 +21,11 @@ process.on 'exit', ->
   stock_sz.stop()
   process.send "[CHILD][SZ] process##{process.pid} exit."
 
+process.on 'error', (err) ->
+  console.log '[CHILD][SZ] Internal Error #{err} Occured.'
+  process.send err
+  process.exit 1
+
 process.on 'SIGTERM', ->
   console.log 'SIGTERM ....'
   process.send "[CHILD][SZ] process##{process.pid} terminated."
