@@ -4,6 +4,9 @@ net  = require 'net'
 os   = require 'os'
 settings = require '../config/settings'
 redis    = require('../db/redis_util').createClient()
+exec     = require('child_process').exec
+require '../util/date'
+StaticWszParser = require '../util/static_wsz_parser'
 
 class WindTalker
 
@@ -218,5 +221,15 @@ class WindTalker
                             console.log key if result
                             console.error "[REDIS][ERROR] update #{corresponding_key} failed for #{err}." if err
                  )
+
+  downloadAndSave: (market) ->
+    fileName = "/tmp/#{market}.#{(new Date()).yyyymmdd()}.wsz"
+    cmd = "wget -O #{fileName} http://www.wstock.cn/cgi-bin/wsRTAPI/wsr2.asp?t=i\\\&m=#{market}\\\&u=#{settings.username}\\\&p=#{settings.password}" 
+    exec cmd, (error, stdout, stderr) ->
+      console.log "[Download][Error][#{market}]: #{error}"     if error isnt null
+      console.log "[Download][#{market}][STDOUT]: #{stdout}"   if stdout
+      console.log "[Download][#{market}][STDERROR]: #{stderr}" if stderr
+      swp = new StaticWszParser(fileName, market, @saveToDb) #function as argument, :)
+      swp.parse()
 
 module.exports = WindTalker

@@ -14,6 +14,8 @@ process.on 'message', (msg) ->
   console.log "[CHILD][SZ] RECEIVED #{msg}"
   if msg is 'start'
     stock_sz.listen()
+  else if msg is 'download'
+    stock_sz.downloadAndSave 'SZ'
   process.send "[CHILD][SZ] process##{process.pid} copy #{msg}."
 
 process.on 'exit', ->

@@ -11,7 +11,7 @@ class Dispatcher
   startJob: (job) ->
     @assignSchedule job
 
-  invokeJob: (job) ->
+  invokeJob: (job, cmd='start') ->
     stock_job = require('child_process').fork(__dirname+"/stock_#{job}.js")
     @jobs[job] = stock_job
     stock_job.on 'message', (msg) ->
@@ -20,7 +20,7 @@ class Dispatcher
         @stopAll()
         setTimeout (-> process.kill 'SIGTERM') , 5000
        
-    stock_job.send 'start'
+    stock_job.send cmd
 
   restartJob: (job) ->
     @stopJob job
@@ -101,6 +101,20 @@ class Dispatcher
     schedule.scheduleJob ruleAftStop, =>
       @stopJob 'sh'
 
+    ruleDownloadStart = new schedule.RecurrenceRule()
+    ruleDownloadStart.dayOfWeek = [1,2,3,4,5]
+    ruleDownloadStart.hour = 15
+    ruleDownloadStart.minute = 10
+    schedule.scheduleJob ruleAftStart, =>
+      @invokeJob 'sh', 'download'
+
+    ruleAftStop = new schedule.RecurrenceRule()
+    ruleAftStop.dayOfWeek = [1,2,3,4,5]
+    ruleAftStop.hour = 15
+    ruleAftStop.minute = 15
+    schedule.scheduleJob ruleAftStop, =>
+      @stopJob 'sh'
+
   shJobCouldBeInvoked: ->
     date = new Date()     
     dayIdx = date.getDay()
@@ -111,6 +125,7 @@ class Dispatcher
     return true if hour is 9 and minutes >= 15
     return true if hour is 11 and minutes < 30
     return true if hour >= 13 and hour < 15
+    return true if hour is 15 and minutes <= 10
     return false
 
   szSchedule: =>
@@ -144,6 +159,20 @@ class Dispatcher
     schedule.scheduleJob ruleAftStop, =>
       @stopJob 'sz'
 
+    ruleDownloadStart = new schedule.RecurrenceRule()
+    ruleDownloadStart.dayOfWeek = [1,2,3,4,5]
+    ruleDownloadStart.hour = 15
+    ruleDownloadStart.minute = 12
+    schedule.scheduleJob ruleAftStart, =>
+      @invokeJob 'sz', 'download'
+
+    ruleAftStop = new schedule.RecurrenceRule()
+    ruleAftStop.dayOfWeek = [1,2,3,4,5]
+    ruleAftStop.hour = 15
+    ruleAftStop.minute = 17
+    schedule.scheduleJob ruleAftStop, =>
+      @stopJob 'sz'
+
   szJobCouldBeInvoked: ->
     date = new Date()     
     dayIdx = date.getDay()
@@ -154,6 +183,7 @@ class Dispatcher
     return true if hour is 9 and minutes >= 15
     return true if hour is 11 and minutes < 30
     return true if hour >= 13 and hour < 15
+    return true if hour is 15 and minutes <= 10
     return false
 
   hkSchedule: =>
@@ -215,6 +245,20 @@ class Dispatcher
     schedule.scheduleJob ruleMorStop, =>
       @stopJob 'us'
 
+    ruleDownloadStart = new schedule.RecurrenceRule()
+    ruleDownloadStart.dayOfWeek = [2,3,4,5,6]
+    ruleDownloadStart.hour = 5
+    ruleDownloadStart.minute = 10
+    schedule.scheduleJob ruleAftStart, =>
+      @invokeJob 'us', 'download'
+
+    ruleAftStop = new schedule.RecurrenceRule()
+    ruleAftStop.dayOfWeek = [2,3,4,5,6]
+    ruleAftStop.hour = 5
+    ruleAftStop.minute = 15
+    schedule.scheduleJob ruleAftStop, =>
+      @stopJob 'us'
+
   usJobCouldBeInvoked: ->
     date    = new Date()     
     dayIdx  = date.getDay()
@@ -222,6 +266,7 @@ class Dispatcher
     minutes = date.getMinutes()
     return true if dayIdx in [1,2,3,4,5] and hour >= 22 and minutes >= 30
     return true if dayIdx in [2,3,4,5,6] and hour < 5 
+    return true if dayIdx in [2,3,4,5,6] and hour is 5 and minutes <= 10
     return false
 
 exports.Dispatcher = Dispatcher
