@@ -105,14 +105,14 @@ class Dispatcher
     ruleDownloadStart.dayOfWeek = [1,2,3,4,5]
     ruleDownloadStart.hour = 15
     ruleDownloadStart.minute = 10
-    schedule.scheduleJob ruleAftStart, =>
+    schedule.scheduleJob  ruleDownloadStart, =>
       @invokeJob 'sh', 'download'
 
-    ruleAftStop = new schedule.RecurrenceRule()
-    ruleAftStop.dayOfWeek = [1,2,3,4,5]
-    ruleAftStop.hour = 15
-    ruleAftStop.minute = 15
-    schedule.scheduleJob ruleAftStop, =>
+    ruleDownloadStop = new schedule.RecurrenceRule()
+    ruleDownloadStop.dayOfWeek = [1,2,3,4,5]
+    ruleDownloadStop.hour = 15
+    ruleDownloadStop.minute = 15
+    schedule.scheduleJob ruleDownloadStop, =>
       @stopJob 'sh'
 
   shJobCouldBeInvoked: ->
@@ -163,14 +163,14 @@ class Dispatcher
     ruleDownloadStart.dayOfWeek = [1,2,3,4,5]
     ruleDownloadStart.hour = 15
     ruleDownloadStart.minute = 12
-    schedule.scheduleJob ruleAftStart, =>
+    schedule.scheduleJob ruleDownloadStart, =>
       @invokeJob 'sz', 'download'
 
-    ruleAftStop = new schedule.RecurrenceRule()
-    ruleAftStop.dayOfWeek = [1,2,3,4,5]
-    ruleAftStop.hour = 15
-    ruleAftStop.minute = 17
-    schedule.scheduleJob ruleAftStop, =>
+    ruleDownloadStop = new schedule.RecurrenceRule()
+    ruleDownloadStop.dayOfWeek = [1,2,3,4,5]
+    ruleDownloadStop.hour = 15
+    ruleDownloadStop.minute = 17
+    schedule.scheduleJob ruleDownloadStop, =>
       @stopJob 'sz'
 
   szJobCouldBeInvoked: ->
@@ -249,14 +249,14 @@ class Dispatcher
     ruleDownloadStart.dayOfWeek = [2,3,4,5,6]
     ruleDownloadStart.hour = 5
     ruleDownloadStart.minute = 10
-    schedule.scheduleJob ruleAftStart, =>
+    schedule.scheduleJob ruleDownloadStart, =>
       @invokeJob 'us', 'download'
 
-    ruleAftStop = new schedule.RecurrenceRule()
-    ruleAftStop.dayOfWeek = [2,3,4,5,6]
-    ruleAftStop.hour = 5
-    ruleAftStop.minute = 15
-    schedule.scheduleJob ruleAftStop, =>
+    ruleDownloadStop = new schedule.RecurrenceRule()
+    ruleDownloadStop.dayOfWeek = [2,3,4,5,6]
+    ruleDownloadStop.hour = 5
+    ruleDownloadStop.minute = 15
+    schedule.scheduleJob ruleDownloadStop, =>
       @stopJob 'us'
 
   usJobCouldBeInvoked: ->
