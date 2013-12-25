@@ -225,11 +225,12 @@ class WindTalker
   downloadAndSave: (market) ->
     fileName = "/tmp/#{market}.#{(new Date()).yyyymmdd()}.wsz"
     cmd = "wget -O #{fileName} http://www.wstock.cn/cgi-bin/wsRTAPI/wsr2.asp?t=i\\\&m=#{market}\\\&u=#{settings.username}\\\&p=#{settings.password}" 
+    saveToDb = @saveToDb
     exec cmd, (error, stdout, stderr) ->
       console.log "[Download][Error][#{market}]: #{error}"     if error isnt null
       console.log "[Download][#{market}][STDOUT]: #{stdout}"   if stdout
       console.log "[Download][#{market}][STDERROR]: #{stderr}" if stderr
-      swp = new StaticWszParser(fileName, market, @saveToDb) #function as argument, :)
+      swp = new StaticWszParser(fileName, market, saveToDb) #pass function
       swp.parse()
 
 module.exports = WindTalker
